@@ -1,0 +1,8 @@
+[2025-06-29 20:49:26.867576] Acesso Negado - Chave inválida
+[2025-06-29 20:49:36.001774] Acesso Negado - Chave inválida
+[2025-06-29 20:49:41.030719] Acesso Negado - Chave inválida
+[2025-06-29 20:49:52.739154] Acesso Negado - Chave inválida
+[2025-06-29 20:51:05.012927] Acesso Negado - Chave inválida
+[2025-06-29 20:52:03.045778] Acesso Negado - Chave inválida
+[2025-06-29 21:04:21.003005] Acesso Negado - Chave inválida
+[2025-06-29 21:04:48.202552] Acesso Negado - Chave inválida

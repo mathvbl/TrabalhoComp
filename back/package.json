@@ -1,0 +1,26 @@
+{
+  "name": "webservice",
+  "version": "1.0.0",
+  "description": "Trabalho Nuvem",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "author": "Matheus,Patrick,Patrick",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.10.0",
+    "bcrypt": "^6.0.0",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "form-data": "^4.0.3",
+    "fs": "^0.0.1-security",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.1",
+    "path": "^0.12.7"
+  }
+}

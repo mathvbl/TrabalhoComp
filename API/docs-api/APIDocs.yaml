@@ -1,0 +1,484 @@
+# OpenAPI Specification (OAS) 3.0.3
+# Documentação da API de Reconhecimento Facial, incluindo segurança por chave de API.
+openapi: 3.0.3
+info:
+  title: API de Reconhecimento Facial
+  description: |-
+    Esta API permite o gerenciamento e a verificação de faces.
+    - A rota **/verify** compara uma imagem com um registro existente.
+    - As rotas **/faces** gerenciam o cadastro de faces (CRUD).
+
+    **Todas as requisições devem incluir uma chave de API válida no header `x-api-key`.**
+
+    ### Avisos Importantes
+    
+
+    1.  **Prova de Vida (Liveness Detection):** A API não verifica se a imagem foi capturada de uma pessoa real ou de uma foto. O utilizador desta API deve implementar os seus próprios métodos de verificação de prova de vida antes de submeter a imagem.
+    2.  **Unicidade do ID:** É da responsabilidade do utilizador garantir que o `id` fornecido para cada face é único. Se for submetido um `id` que já existe, os dados associados a esse `id` serão sobrescritos.
+    3.  **Encriptação:** A API, na sua versão atual, não implementa a encriptação dos dados em repouso (como os *encodings* das faces). No entanto, a sua arquitetura modular permite que uma camada de encriptação seja adicionada futuramente sem impactar negativamente os outros recursos.
+    
+    Obs: A chave da API está localizada no arquivo .env da API insira-a no `Authorize`.
+  version: 1.1.0
+  contact:
+    email: matheus13leandro@hotmail.com
+
+# Definição dos servidores da API.
+servers:
+  - url: http://127.0.0.1:5000
+    description: Servidor de Desenvolvimento Local
+
+# Tags para agrupar os endpoints na documentação.
+tags:
+  - name: Gerenciamento de Faces
+    description: Operações CRUD para registrar e gerenciar as faces no sistema.
+  - name: Verificação de Faces
+    description: Operações para verificar a identidade de uma pessoa.
+
+# Definição dos endpoints (caminhos) da API.
+paths:
+  # --- ROTA: VERIFICAÇÃO DE FACE ---
+  /verify:
+    post:
+      tags:
+        - Verificação de Faces
+      summary: Verifica se uma imagem corresponde a uma face registrada
+      description: |-
+        Compara uma imagem enviada com a face registrada correspondente ao `id` fornecido.
+        Retorna 'authorized' se houver correspondência ou 'unauthorized' caso contrário.
+        A requisição deve ser do tipo `multipart/form-data`.
+      operationId: verifyFace
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  description: O ID da face registrada a ser verificada, controlado pelo requisitante.
+                  example: '12345'
+                image:
+                  type: string
+                  format: binary
+                  description: O ficheiro de imagem com a face a ser comparada.
+              required:
+                - id
+                - image
+      responses:
+        '200':
+          description: Verificação bem-sucedida com correspondência encontrada (Autorizado).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationSuccess'
+        '400':
+          description: Requisição inválida. Ocorre por campos ausentes, formato de imagem inválido ou dados de imagem incorretos.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              examples:
+                camposAusentes:
+                  summary: Campos obrigatórios em falta
+                  value:
+                    error: 'ID e Imagem obrigatória'
+                formatoInvalido:
+                  summary: Formato do ficheiro de imagem inválido
+                  value:
+                    error: 'Imagem formato Inválido'
+                dadosInvalidos:
+                  summary: Imagem com dados inválidos (por exemplo, não é RGB)
+                  value:
+                    error: 'Imagem inválida'
+        '401':
+          description: Não autorizado. Ocorre por chave de API inválida/ausente, ou quando a verificação não encontra correspondência.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ApiKeyError'
+                  - $ref: '#/components/schemas/VerificationUnauthorized'
+        '500':
+          description: Erro interno no servidor durante o processamento.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                example:
+                  error: 'Erro Interno na API'
+  
+  # --- ROTAS: GERENCIAMENTO DE FACES ---
+  /faces:
+    get:
+      tags:
+        - Gerenciamento de Faces
+      summary: Lista todas as faces registradas
+      description: Retorna uma lista com o ID e o nome de todas as faces cadastradas no sistema.
+      operationId: listFaces
+      responses:
+        '200':
+          description: Lista de faces retornada com sucesso.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FaceSummary'
+        '401':
+          description: Não autorizado. Ocorre por chave de API inválida/ausente, ou se a base de dados de faces estiver vazia.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ApiKeyError'
+                  - $ref: '#/components/schemas/FacesDoNotExistError'
+        '500':
+          description: Erro interno no servidor.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                example:
+                  error: 'Erro interno'
+    post:
+      tags:
+        - Gerenciamento de Faces
+      summary: Registra uma nova face
+      description: |-
+        Adiciona uma nova face ao sistema. Esta rota não atualiza um registro existente; para isso, use a rota `PUT`.
+        A requisição deve ser do tipo `multipart/form-data`.
+      operationId: addFace
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  description: O ID único para a face, como a matrícula do funcionário ou o CPF.
+                  example: '12345'
+                name:
+                  type: string
+                  description: O nome da pessoa.
+                  example: 'Maria José'
+                image:
+                  type: string
+                  format: binary
+                  description: O ficheiro de imagem da face.
+              required:
+                - id
+                - name
+                - image
+      responses:
+        '201':
+          description: Face criada com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FaceSummary'
+        '400':
+          description: Requisição inválida. Ocorre por campos ausentes, formato de imagem inválido ou nenhum rosto detetado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              examples:
+                camposAusentes:
+                  summary: Campos obrigatórios em falta
+                  value:
+                    error: 'ID,Nome e imagem são obrigatórios'
+                formatoInvalido:
+                  summary: Formato do ficheiro de imagem inválido
+                  value:
+                    error: 'Formato inválido'
+                dadosInvalidos:
+                  summary: Imagem com dados inválidos (por exemplo, não é RGB)
+                  value:
+                    error: 'Imagem inválida'
+                rostoNaoDetectado:
+                  summary: Nenhum rosto encontrado na imagem
+                  value:
+                    error: 'Nenhum rosto detectado'
+        '401':
+          description: Não autorizado. Ocorre por chave de API inválida/ausente, ou se o ID do utilizador já existir.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ApiKeyError'
+                  - $ref: '#/components/schemas/UserAlreadyExistsError'
+                  - $ref: '#/components/schemas/FacesDoNotExistError'
+        '500':
+          description: Erro interno no servidor.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                example:
+                  error: 'Erro Interno na API'
+  
+  /faces/{face_id}:
+    parameters:
+      - name: face_id
+        in: path
+        required: true
+        description: O ID da face a ser manipulada.
+        schema:
+          type: string
+    put:
+      tags:
+        - Gerenciamento de Faces
+      summary: Atualiza a imagem de uma face existente
+      description: |-
+        Atualiza o ficheiro de imagem para uma face já registrada, mantendo o mesmo ID e nome.
+        A requisição deve ser do tipo `multipart/form-data`.
+      operationId: updateFaceImage
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: O novo ficheiro de imagem da face.
+              required:
+                - image
+      responses:
+        '200':
+          description: Imagem da face atualizada com sucesso.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: 'Rosto atualizado com sucesso'
+        '400':
+          description: Requisição inválida. Ocorre por imagem ausente, formato de imagem incorreto ou nenhum rosto detetado na nova imagem.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              examples:
+                imagemAusente:
+                  summary: Ficheiro de imagem não enviado
+                  value:
+                    error: 'Nova imagem obrigatória'
+                formatoInvalido:
+                  summary: Formato do ficheiro de imagem inválido
+                  value:
+                    error: 'Formato inválido'
+                rostoNaoDetectado:
+                  summary: Nenhum rosto encontrado na nova imagem
+                  value:
+                    error: 'Nenhum rosto detectado'
+        '401':
+          description: Não autorizado. Ocorre por chave de API inválida/ausente, ou se a base de dados de faces estiver vazia.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ApiKeyError'
+                  - $ref: '#/components/schemas/FacesDoNotExistError'
+        '404':
+          description: Face com o ID especificado não encontrada.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                example:
+                  error: 'Face não encontrada'
+        '500':
+          description: Erro interno no servidor.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              examples:
+                erroSalvar:
+                  summary: Erro ao salvar dados
+                  value:
+                    error: 'Erro Interno na API'
+                erroGeral:
+                  summary: Erro genérico do servidor
+                  value:
+                    error: 'Erro interno'
+    delete:
+      tags:
+        - Gerenciamento de Faces
+      summary: Remove uma face do sistema
+      description: Remove permanentemente os dados e a imagem de uma face do sistema.
+      operationId: deleteFace
+      responses:
+        '200':
+          description: Face removida com sucesso.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: 'Rosto removido com sucesso'
+        '401':
+          description: Não autorizado. Ocorre por chave de API inválida/ausente, ou se a base de dados de faces estiver vazia.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ApiKeyError'
+                  - $ref: '#/components/schemas/FacesDoNotExistError'
+        '404':
+          description: Face com o ID especificado não encontrada.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                example:
+                  error: 'Face não encontrada'
+        '500':
+          description: Erro interno no servidor.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              examples:
+                erroRemoverImagem:
+                  summary: Erro ao apagar ficheiro de imagem
+                  value:
+                    error: 'Erro ao remover imagem do disco'
+                erroSalvarJson:
+                  summary: Erro ao salvar o ficheiro de dados
+                  value:
+                    error: 'Erro ao atualizar base de dados'
+                erroGeral:
+                  summary: Erro genérico do servidor
+                  value:
+                    error: 'Erro interno'
+
+# Componentes reutilizáveis (schemas, segurança, etc.)
+components:
+  schemas:
+    # Schema para a resposta de sucesso na verificação (200)
+    VerificationSuccess:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'authorized'
+        user_id:
+          type: string
+          example: '12345'
+        name:
+          type: string
+          example: 'Maria José'
+      required:
+        - status
+        - user_id
+        - name
+          
+    # Schema para a resposta de não autorizado na verificação (401)
+    VerificationUnauthorized:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'unauthorized'
+      required:
+        - status
+
+    # Schema para erro de base de dados de faces vazia (401)
+    FacesDoNotExistError:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'Faces não existem'
+      required:
+        - status
+    
+    # Schema para erro de utilizador já existente (401)
+    UserAlreadyExistsError:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'Usuário já registrado'
+      required:
+        - status
+
+    # Schema para erro de chave de API (401)
+    ApiKeyError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: 'Chave da API inválida ou ausente'
+      required:
+        - error
+
+    # Schema para resumo de face (usado no GET e POST de /faces)
+    FaceSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          example: '12345'
+        name:
+          type: string
+          example: 'Maria José'
+      required:
+        - id
+        - name
+  
+  # Definição dos esquemas de segurança.
+  securitySchemes:
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: Chave de API necessária para autenticar todas as requisições.
+
+# Aplicação global do esquema de segurança.
+security:
+  - apiKeyAuth: []
+

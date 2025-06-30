@@ -1,0 +1,23 @@
+Passo 1: Copiar o Conteúdo do seu Arquivo YAML
+
+O editor online não permite carregar um arquivo diretamente do seu computador por razões de segurança. Em vez disso, você irá colar o conteúdo.
+
+    Encontre e abra o arquivo APIDocs.yaml nessa pasta usando editor de texto.
+
+    Selecione todo o texto dentro do arquivo (Ctrl + A ou Cmd + A) e copie-o (Ctrl + C ou Cmd + C).
+
+
+Passo 2: Acessar o editor
+
+    Abra o seu navegador de internet.
+
+    Acesse o site oficial do Swagger Editor: https://editor.swagger.io/
+
+    Ao abrir, o site irá mostrar um exemplo de documentação de uma "Petstore".
+Passo 3: Substituir o Exemplo pelo seu Código
+
+Agora, você irá limpar o exemplo e colar o seu próprio código.
+
+    No painel esquerdo (o editor de texto), apague todo o conteúdo de exemplo. Uma forma fácil é clicar no menu File > Clear Editor.
+
+    Com o editor limpo, cole o conteúdo do seu arquivo YAML que você copiou no Passo 1 (Ctrl + V ou Cmd + V).
